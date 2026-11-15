@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NoStress Idle Empire</title>
+<style>
+:root{--bg:#07111f;--panel:#101f35;--panel2:#142743;--line:#29476c;--cyan:#36d8ff;--gold:#ffd45a;--green:#59e39a;--text:#eef6ff;--muted:#9eb5d2}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top,#17345b 0,#07111f 55%);color:var(--text);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+button{font:inherit;cursor:pointer;border:0;border-radius:10px;padding:10px 14px;font-weight:800;transition:.15s transform,.15s filter}button:hover{filter:brightness(1.12);transform:translateY(-1px)}button:disabled{opacity:.42;cursor:not-allowed;transform:none}
+.wrap{max-width:1180px;margin:auto;padding:18px}.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.brand{font-weight:1000;font-size:clamp(24px,4vw,38px);letter-spacing:-1px;color:white}.brand span{color:var(--cyan)}.subtitle{color:var(--muted);font-size:13px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0 18px}.stat{background:linear-gradient(135deg,#122846,#0c1b2e);border:1px solid var(--line);border-radius:14px;padding:13px;text-align:center}.stat small{display:block;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:1px;font-size:11px}.stat strong{display:block;font-size:clamp(18px,3vw,27px);color:var(--gold);margin-top:4px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}.tab{background:#142743;color:#cfe4ff;border:1px solid #29476c}.tab.active{background:var(--cyan);color:#06121f}
+.panel{background:linear-gradient(145deg,rgba(18,38,65,.97),rgba(9,22,39,.97));border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 12px 30px #0003}
+.section-title{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 0 14px;font-size:21px}.section-title small{color:var(--muted);font-size:12px;font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(245px,1fr));gap:12px}
+.business{border:1px solid #29476c;background:linear-gradient(145deg,#152c4b,#0c1c30);border-radius:14px;padding:14px;position:relative;overflow:hidden}.business.locked{opacity:.72}.business h3{margin:0 0 5px;font-size:18px}.business .emoji{font-size:28px;float:right;margin-left:8px}.desc{color:var(--muted);font-size:13px;min-height:36px}.numbers{display:flex;justify-content:space-between;gap:8px;margin:10px 0;font-size:13px}.numbers b{color:var(--green)}.progress{height:7px;background:#07111f;border-radius:99px;overflow:hidden;margin:8px 0}.progress i{display:block;height:100%;background:linear-gradient(90deg,var(--cyan),var(--green));width:0%}.buy{background:linear-gradient(90deg,#0879df,#21c5ef);color:#031323;width:100%}.upgrade{background:#25456b;color:#e9f5ff;width:100%;margin-top:7px}.goldbtn{background:linear-gradient(90deg,#e9a923,#ffe477);color:#2a1a00}.greenbtn{background:linear-gradient(90deg,#13a86b,#68f0a8);color:#032217}
+.hidden{display:none!important}.citybar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}.city{background:#213a5b;color:#dbeaff}.city.active{background:#ffd45a;color:#251800}
+.notice{background:#0b2038;border:1px solid #24527d;border-radius:12px;padding:12px;color:#bfeaff;margin-bottom:12px}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.mission,.achievement{padding:12px;border:1px solid var(--line);border-radius:12px;background:#10233b;margin-bottom:9px}.mission b,.achievement b{display:block}.mission small,.achievement small{color:var(--muted)}.mission button{margin-top:8px}
+footer{text-align:center;color:#7893b5;font-size:12px;padding:22px}
+@media(max-width:600px){.wrap{padding:10px}.stats{gap:6px}.stat{padding:10px 5px}.panel{padding:12px}.grid{grid-template-columns:1fr}.top .row{width:100%}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+<div><div class="brand">NS<span>GAMEBOY</span> <span style="color:#fff">/ IDLE EMPIRE</span></div><div class="subtitle">Build your empire. Earn while you rest. • Autosave enabled</div></div>
+<div class="row"><button class="tab" id="soundBtn" onclick="toggleSound()">🔔 Sound: Off</button><button class="tab" onclick="saveGame(true)">💾 Save</button><button class="tab" onclick="resetGame()">↻ Reset</button></div>
+</header>
+<div class="stats">
+<div class="stat"><small>💰 Cash</small><strong id="cash">$0</strong></div>
+<div class="stat"><small>📈 Income / sec</small><strong id="income">$0</strong></div>
+<div class="stat"><small>🏙️ Empire Value</small><strong id="value">$0</strong></div>
+</div>
+<div class="notice" id="welcome">Welcome, Founder! Buy your first business and start building a global empire.</div><div style="text-align:center;margin:0 0 16px"><button class="goldbtn" onclick="collect()" style="font-size:18px;padding:13px 24px">👆 Founder Tap • <span id="tapValue">+$10</span></button></div>
+<div class="tabs">
+<button class="tab active" data-tab="businesses">🏢 Businesses</button>
+<button class="tab" data-tab="upgrades">⚡ Upgrades</button>
+<button class="tab" data-tab="cities">🌎 Cities</button>
+<button class="tab" data-tab="missions">🎯 Missions</button>
+<button class="tab" data-tab="achievements">🏆 Achievements</button>
+</div>
+<section id="businesses" class="panel">
+<h2 class="section-title">Your Businesses <small>Tap collect to boost your cash</small></h2>
+<div class="citybar" id="cityFilter"></div>
+<div class="grid" id="businessGrid"></div>
+</section>
+<section id="upgrades" class="panel hidden">
+<h2 class="section-title">Empire Upgrades <small>Permanent boosts</small></h2><div class="grid" id="upgradeGrid"></div>
+</section>
+<section id="cities" class="panel hidden">
+<h2 class="section-title">Expand to New Cities <small>Unlock more business opportunities</small></h2><div class="grid" id="cityGrid"></div>
+</section>
+<section id="missions" class="panel hidden">
+<h2 class="section-title">Daily & Growth Missions <small>Rewards refresh daily</small></h2><div id="missionList"></div>
+</section>
+<section id="achievements" class="panel hidden">
+<h2 class="section-title">Achievements <small>Milestones in your journey</small></h2><div id="achievementList"></div>
+</section>
+<footer>NoStress Idle Empire • A free browser idle game • Progress is saved on this device</footer>
+</div>
+<script>
+const fmt=n=>{if(!isFinite(n))return "$∞";if(n<1000)return "$"+Math.floor(n).toLocaleString();let units=["K","M","B","T","Qa","Qi"];let i=-1;do{n/=1000;i++}while(n>=1000&&i<units.length-1);return "$"+n.toFixed(n>=100?0:n>=10?1:2)+units[i]};
+const plain=n=>{if(n<1000)return Math.floor(n).toLocaleString();return fmt(n).replace("$","")};
+const businessDefs=[
+{id:"lemon",name:"Lemonade Stand",emoji:"🍋",city:0,desc:"A small stand with a big future.",base:15,rev:1.2,unlock:0},
+{id:"coffee",name:"Coffee Shop",emoji:"☕",city:0,desc:"Keep the city caffeinated.",base:120,rev:8,unlock:5},
+{id:"food",name:"Food Truck",emoji:"🌮",city:0,desc:"Serve hungry crowds on the move.",base:950,rev:55,unlock:25},
+{id:"store",name:"Mini Market",emoji:"🏪",city:0,desc:"Everyday goods, steady profit.",base:7200,rev:420,unlock:100},
+{id:"hotel",name:"Boutique Hotel",emoji:"🏨",city:1,desc:"Premium rooms for travelers.",base:65000,rev:3800,unlock:350},
+{id:"factory",name:"Smart Factory",emoji:"🏭",city:1,desc:"Produce goods around the clock.",base:520000,rev:33000,unlock:1200},
+{id:"tech",name:"Tech Startup",emoji:"💻",city:2,desc:"Turn ideas into scalable income.",base:4800000,rev:290000,unlock:5000},
+{id:"tower",name:"Skyscraper",emoji:"🏙️",city:2,desc:"A landmark that pays dividends.",base:42000000,rev:2400000,unlock:20000},
+{id:"space",name:"Space Company",emoji:"🚀",city:3,desc:"Your empire reaches beyond Earth.",base:400000000,rev:22000000,unlock:100000}
+];
+const cities=[{name:"Starter Town",emoji:"🏡",cost:0,desc:"Your first home base."},{name:"Metro City",emoji:"🌆",cost:25000,desc:"A bustling city of opportunity."},{name:"Silicon Valley",emoji:"🌉",cost:2500000,desc:"The world's innovation hub."},{name:"Moon Base",emoji:"🌕",cost:250000000,desc:"One giant leap for business."}];
+const upgradeDefs=[
+{id:"marketing",name:"Viral Marketing",emoji:"📣",desc:"All businesses earn +25% per level.",base:150,mult:1.7,effect:"global"},
+{id:"automation",name:"Automation",emoji:"⚙️",desc:"All businesses earn +50% per level.",base:1200,mult:2,effect:"global"},
+{id:"manager",name:"Expert Managers",emoji:"🧑‍💼",desc:"Business income +20% per level.",base:8500,mult:2.1,effect:"global"},
+{id:"invest",name:"Smart Investing",emoji:"📊",desc:"Offline earnings +10% per level.",base:50000,mult:2.2,effect:"offline"},
+{id:"click",name:"Golden Touch",emoji:"👆",desc:"Manual collect bonus doubles per level.",base:350,mult:1.8,effect:"click"},
+{id:"speed",name:"Fast Operations",emoji:"⏩",desc:"All business cycles run 10% faster per level.",base:12000,mult:2,effect:"speed"}
+];
+let state;
+function fresh(){return {cash:80,totalEarned:0,totalClicks:0,owned:{},levels:{},managers:{},upgrades:{},unlockedCities:[0],city:0,started:Date.now(),last:Date.now(),claimed:{},achievements:{},daily:{date:"",claimed:false},sound:false};}
+function load(){try{let s=JSON.parse(localStorage.getItem("nsg_idle_empire"));if(s&&s.owned)return Object.assign(fresh(),s)}catch(e){}return fresh()}
+state=load();
+function owned(id){return state.owned[id]||0}
+function level(id){return state.levels[id]||0}
+function up(id){return state.upgrades[id]||0}
+function cityUnlocked(i){return state.unlockedCities.includes(i)}
+function businessCost(d){return Math.floor(d.base*Math.pow(1.15,owned(d.id)))}
+function upgradeCost(u){return Math.floor(u.base*Math.pow(u.mult,up(u.id)))}
+function globalMultiplier(){return (1+.25*up("marketing"))*(1+.5*up("automation"))*(1+.2*up("manager"))}
+function incomeFor(d){return owned(d.id)*d.rev*globalMultiplier()*(state.managers[d.id]?2:1)*(1+.1*up("speed"))}
+function income(){return businessDefs.reduce((a,d)=>a+incomeFor(d),0)}
+function empireValue(){return state.totalEarned+Object.keys(state.owned).reduce((a,id)=>a+owned(id)*businessDefs.find(d=>d.id===id).base,0)}
+function cashPerClick(){return Math.max(1,income()*.08+10)*Math.pow(2,up("click"))}
+function cityBusinesses(i){return businessDefs.filter(d=>d.city===i)}
+function canBuy(d){return cityUnlocked(d.city)&&state.cash>=businessCost(d)&&state.totalEarned>=d.unlock}
+function buyBusiness(id){let d=businessDefs.find(x=>x.id===id);let c=businessCost(d);if(!canBuy(d))return;state.cash-=c;state.owned[id]=owned(id)+1;toast(d.name+" purchased!");render();saveGame()}
+function hire(id){let d=businessDefs.find(x=>x.id===id),cost=Math.floor(d.base*8*Math.pow(1.8, state.managers[id]?1:0));if(state.managers[id]||state.cash<cost)return;state.cash-=cost;state.managers[id]=true;toast("Manager hired for "+d.name+"!");render();saveGame()}
+function buyUpgrade(id){let u=upgradeDefs.find(x=>x.id===id),c=upgradeCost(u);if(state.cash<c)return;state.cash-=c;state.upgrades[id]=up(id)+1;render();saveGame();toast(u.name+" upgraded!")}
+function collect(){let gain=cashPerClick();state.cash+=gain;state.totalEarned+=gain;state.totalClicks++;renderStats();sound();saveGame()}
+function unlockCity(i){let c=cities[i];if(cityUnlocked(i)||state.cash<c.cost)return;state.cash-=c.cost;state.unlockedCities.push(i);state.city=i;render();saveGame();toast(c.name+" unlocked!")}
+function saveGame(show=false){state.last=Date.now();localStorage.setItem("nsg_idle_empire",JSON.stringify(state));if(show)toast("Game saved on this device.")}
+function resetGame(){if(!confirm("Reset all progress? This cannot be undone."))return;localStorage.removeItem("nsg_idle_empire");state=fresh();render();toast("New empire started.")}
+function toast(msg){let el=document.getElementById("welcome");el.textContent=msg;el.style.borderColor="#36d8ff";setTimeout(()=>el.style.borderColor="#24527d",900)}
+function renderStats(){document.getElementById("cash").textContent=fmt(state.cash);document.getElementById("income").textContent=fmt(income())+"/s";document.getElementById("value").textContent=fmt(empireValue());document.getElementById("tapValue").textContent="+"+fmt(cashPerClick())}
+function renderCitiesFilter(){document.getElementById("cityFilter").innerHTML=cities.filter(c=>cityUnlocked(cities.indexOf(c))).map(c=>`<button class="city ${state.city===cities.indexOf(c)?"active":""}" onclick="state.city=${cities.indexOf(c)};render()">${c.emoji} ${c.name}</button>`).join("")}
+function renderBusinesses(){let arr=cityBusinesses(state.city);document.getElementById("businessGrid").innerHTML=arr.map(d=>{let count=owned(d.id),cost=businessCost(d),locked=state.totalEarned<d.unlock,managerCost=Math.floor(d.base*8);return `<article class="business ${locked?"locked":""}"><span class="emoji">${d.emoji}</span><h3>${d.name} <small style="color:#7fa4ca">×${count}</small></h3><div class="desc">${d.desc}</div><div class="numbers"><span>Income</span><b>${fmt(incomeFor(d))}/s</b></div><div class="numbers"><span>Next cost</span><strong>${fmt(cost)}</strong></div>${locked?`<div class="notice">Earn ${fmt(d.unlock)} total to unlock.</div>`:`<button class="buy" ${state.cash<cost?"disabled":""} onclick="buyBusiness('${d.id}')">Buy • ${fmt(cost)}</button>`}<button class="upgrade" ${!count||state.managers[d.id]||state.cash<managerCost?"disabled":""} onclick="hire('${d.id}')">${state.managers[d.id]?"✓ Manager hired":"Hire Manager • "+fmt(managerCost)} (2×)</button></article>`}).join("")||"<p>Unlock a city to discover businesses.</p>"}
+function renderUpgrades(){document.getElementById("upgradeGrid").innerHTML=upgradeDefs.map(u=>{let c=upgradeCost(u);return `<article class="business"><span class="emoji">${u.emoji}</span><h3>${u.name} <small style="color:#7fa4ca">Lv.${up(u.id)}</small></h3><div class="desc">${u.desc}</div><div class="numbers"><span>Next upgrade</span><b>${fmt(c)}</b></div><button class="buy goldbtn" ${state.cash<c?"disabled":""} onclick="buyUpgrade('${u.id}')">Upgrade • ${fmt(c)}</button></article>`}).join("")}
+function renderCityCards(){document.getElementById("cityGrid").innerHTML=cities.map((c,i)=>`<article class="business"><span class="emoji">${c.emoji}</span><h3>${c.name}</h3><div class="desc">${c.desc}</div><div class="numbers"><span>Unlock cost</span><b>${i===0?"Unlocked":fmt(c.cost)}</b></div><button class="buy ${cityUnlocked(i)?"greenbtn":""}" ${cityUnlocked(i)||state.cash<c.cost?"disabled":""} onclick="unlockCity(${i})">${cityUnlocked(i)?"✓ Unlocked":"Unlock City"}</button></article>`).join("")}
+function dayKey(){let d=new Date();return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate()}
+function missions(){return [{id:"clicks",title:"Tap Founder",desc:"Collect cash manually 10 times.",progress:state.totalClicks,goal:10,reward:250},{id:"shops",title:"Local Business",desc:"Own 5 Lemonade Stands.",progress:owned("lemon"),goal:5,reward:500},{id:"earn",title:"First Fortune",desc:"Earn $10,000 total.",progress:state.totalEarned,goal:10000,reward:1500},{id:"city",title:"Urban Expansion",desc:"Unlock Metro City.",progress:cityUnlocked(1)?1:0,goal:1,reward:5000}]}
+function renderMissions(){document.getElementById("missionList").innerHTML=`<div class="mission"><b>🎁 Daily Founder Bonus</b><small>Claim once per day: ${fmt(Math.max(500,income()*60+500))}</small><button class="goldbtn" ${state.daily.date===dayKey()&&state.daily.claimed?"disabled":""} onclick="claimDaily()"> ${state.daily.date===dayKey()&&state.daily.claimed?"Claimed today":"Claim Daily Bonus"} </button></div>`+missions().map(m=>{let done=state.claimed[m.id],p=Math.min(100,m.progress/m.goal*100);return `<div class="mission"><b>${done?"✅":"🎯"} ${m.title}</b><small>${m.desc} (${plain(m.progress)} / ${plain(m.goal)}) • Reward ${fmt(m.reward)}</small><div class="progress"><i style="width:${p}%"></i></div><button class="greenbtn" ${done||m.progress<m.goal?"disabled":""} onclick="claimMission('${m.id}',${m.reward})">${done?"Completed":"Claim Reward"}</button></div>`}).join("")}
+function claimDaily(){if(state.daily.date===dayKey()&&state.daily.claimed)return;let r=Math.max(500,income()*60+500);state.cash+=r;state.totalEarned+=r;state.daily={date:dayKey(),claimed:true};render();saveGame();toast("Daily bonus claimed: "+fmt(r))}
+function claimMission(id,r){if(state.claimed[id])return;let m=missions().find(x=>x.id===id);if(!m||m.progress<m.goal)return;state.claimed[id]=true;state.cash+=r;state.totalEarned+=r;render();saveGame();toast("Mission reward: "+fmt(r))}
+const achievementDefs=[["first","First Steps","Buy your first business.",()=>Object.values(state.owned).some(n=>n>0)],["ten","Small Empire","Own 10 businesses total.",()=>Object.values(state.owned).reduce((a,b)=>a+b,0)>=10],["million","Millionaire","Earn $1 million total.",()=>state.totalEarned>=1e6],["allcities","World Builder","Unlock every city.",()=>state.unlockedCities.length===cities.length],["click100","Click Champion","Collect 100 times.",()=>state.totalClicks>=100],["manager","People Power","Hire a manager.",()=>Object.values(state.managers).some(Boolean)]];
+function renderAchievements(){document.getElementById("achievementList").innerHTML=achievementDefs.map(a=>{let done=a[3](),claimed=state.achievements[a[0]];if(done&&!claimed){state.achievements[a[0]]=true;claimed=true}return `<div class="achievement"><b>${claimed?"🏆":"🔒"} ${a[1]}</b><small>${a[2]} ${claimed?"• Unlocked":""}</small></div>`}).join("")}
+function render(){renderStats();renderCitiesFilter();renderBusinesses();renderUpgrades();renderCityCards();renderMissions();renderAchievements()}
+document.querySelectorAll("[data-tab]").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll("[data-tab]").forEach(x=>x.classList.toggle("active",x===b));["businesses","upgrades","cities","missions","achievements"].forEach(id=>document.getElementById(id).classList.toggle("hidden",id!==b.dataset.tab))}));
+function toggleSound(){state.sound=!state.sound;document.getElementById("soundBtn").textContent="🔔 Sound: "+(state.sound?"On":"Off");saveGame()}
+function sound(){if(!state.sound)return;try{let c=new(window.AudioContext||window.webkitAudioContext)(),o=c.createOscillator(),g=c.createGain();o.frequency.value=620;g.gain.value=.04;o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+.07)}catch(e){}}
+setInterval(()=>{let now=Date.now(),dt=Math.min((now-state.last)/1000,3600*24*7);state.last=now;let gain=income()*dt*(1+.1*up("invest"));if(gain>0){state.cash+=gain;state.totalEarned+=gain}renderStats();},1000);
+window.addEventListener("beforeunload",()=>saveGame());
+let offline=(Date.now()-state.last)/1000;if(offline>10){let gain=income()*Math.min(offline,86400*7)*(1+.1*up("invest"));if(gain>0){state.cash+=gain;state.totalEarned+=gain;setTimeout(()=>toast("Welcome back! Offline earnings: "+fmt(gain)),300)}}
+render();saveGame();
+</script>
+</body>
+</html>
