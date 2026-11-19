@@ -114,7 +114,8 @@ function businessTier(own){return Math.floor(Math.max(0,own)/5)}
 function businessProgress(own){return Math.max(0,own)%5}
 function renderCityGrowth(){
   /* Keep the skyline's starting dimensions fixed. Only progress in the CURRENT city may grow a tower; previous-city levels must not distort the first-city baseline. */
-  const baseHeights={market:75,cafe:112,burger:91,hotel:146,mall:120,bank:178};
+  const baseHeight=100; // Every building starts at exactly the same height.
+  const baseHeights={market:baseHeight,cafe:baseHeight,burger:baseHeight,hotel:baseHeight,mall:baseHeight,bank:baseHeight,factory:baseHeight,tech:baseHeight};
   document.querySelectorAll('.tower[data-biz]').forEach(t=>{
     const id=t.dataset.biz,b=defs.find(x=>x.id===id),own=s.owned[id]||0,lv=s.levels[id]||0;
     const cityStart=(s.city||0)*5;
