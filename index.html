@@ -106,15 +106,67 @@ const empireNames=['글로벌 기업','세계적 재벌','산업 거인','초거
 const empireName=()=>empireNames[Math.min(s.era,empireNames.length-1)] + (s.era>=empireNames.length?' · '+(s.era+1)+'단계':'');
 function checkEmpireEra(){let changed=false;while(s.era<100&&s.cash+s.earned*.15>=empireThreshold(s.era)){s.era++;changed=true;}if(changed){toast('🌌 '+empireName()+' 시대 달성! 영구 수익 보너스 +15%');}}
 function toast(t){$('toast').textContent=t;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),2200)}
-function gain(n){if(!(n>0))return;s.cash+=n;s.earned+=n;s.xp+=Math.max(1,Math.floor(n/30));checkEmpireEra();while(s.xp>=needXP()){s.xp-=needXP();s.level++;toast('🎉 제국 레벨 '+s.level+' 달성!')}}
+function gain(n){if(!(n>0))return;s.cash+=n;s.earned+=n;s.xp+=Math.max(1,Math.floor(n/30));checkEmpireEra();while(s.xp>=needXP()){s.xp-=needXP();s.level++;toast('🎉 제국 레벨 '+s.level+' 달성!')}updateBusinessActionStates()}
 function pop(el,t){const r=el.getBoundingClientRect(),node=document.createElement('div');node.className='float';node.textContent=t;node.style.left=(r.left+r.width/2)+'px';node.style.top=(r.top+4)+'px';document.body.append(node);setTimeout(()=>node.remove(),950)}
 function save(silent=false){s.last=Date.now();try{localStorage.setItem('nostressIdleEmpireSaveV2',JSON.stringify(s));if(!silent)toast('게임이 저장됐어요!')}catch(e){if(!silent)toast('저장 공간을 사용할 수 없습니다.')}}
 function load(){try{const raw=localStorage.getItem('nostressIdleEmpireSaveV2');if(!raw)return;const x=JSON.parse(raw);s={...fresh(),...x,owned:{...fresh().owned,...x.owned},levels:x.levels||{},buyGrowth:x.buyGrowth||Object.fromEntries(defs.map(b=>[b.id,Math.max(0,(x.owned?.[b.id]||0)-1)])),hired:x.hired||[],bought:x.bought||[],claims:x.claims||{},era:Math.max(0,Number(x.era)||0),research:Math.max(0,Number(x.research)||0)};defs.forEach(b=>{if(b.id!=='market'&&(s.owned[b.id]||0)>0)s.buyGrowth[b.id]=Math.max(Number(s.buyGrowth[b.id])||0,s.owned[b.id]||0)});s.city=Math.max(0,Math.min(cities.length-1,Number(s.city)||0));const seconds=Math.min(8*3600,Math.max(0,(Date.now()-(x.last||Date.now()))/1000));if(seconds>5){const away=totalRate()*seconds;gain(away);setTimeout(()=>toast('오프라인 수익 '+money(away)+' 획득!'),500)}}catch(e){console.warn('Save load failed',e)}}
 function businessTier(own){return Math.floor(Math.max(0,own)/5)}
 function businessProgress(own){return Math.max(0,own)%5}
-function renderCityGrowth(){document.querySelectorAll('.tower[data-biz]').forEach(t=>{const id=t.dataset.biz,b=defs.find(x=>x.id===id),own=s.owned[id]||0,lv=s.levels[id]||0,tier=Math.floor(buyProgress(id)/5);const base={market:75,cafe:112,burger:91,hotel:146,mall:120,bank:178}[id]||80;t.style.height=Math.min(218,base+tier*12+lv*5)+'px';t.style.transform='scaleX('+(1+Math.min(tier,5)*.035)+')';t.title=(b?b.name:'건물')+' · 보유 '+own+'개 · 확장 '+tier+'단계'});}
+function renderCityGrowth(){
+  /* Keep the skyline's starting dimensions fixed. Only progress in the CURRENT city may grow a tower; previous-city levels must not distort the first-city baseline. */
+  const baseHeights={market:75,cafe:112,burger:91,hotel:146,mall:120,bank:178};
+  document.querySelectorAll('.tower[data-biz]').forEach(t=>{
+    const id=t.dataset.biz,b=defs.find(x=>x.id===id),own=s.owned[id]||0,lv=s.levels[id]||0;
+    const cityStart=(s.city||0)*5;
+    const localBuy=Math.min(5,Math.max(0,buyProgress(id)-cityStart));
+    const localIncome=Math.min(5,Math.max(0,lv-cityStart));
+    const base=baseHeights[id]||80;
+    const height=Math.min(220,base+localBuy*4+localIncome*3);
+    t.style.height=height+'px';
+    t.style.removeProperty('transform');
+    t.title=(b?b.name:'Building')+' · Owned '+own+' · Current city growth '+(localBuy+localIncome)+'/10';
+  });
+}
 function renderStats(){$('money').textContent=money(s.cash);$('income').textContent=money(totalRate())+'/s';$('worth').textContent=money(s.cash+s.earned*.15);$('level').textContent='Lv. '+s.level;$('xptext').textContent='경험치 '+Math.floor(s.xp)+' / '+needXP();$('xpbar').style.width=Math.min(100,s.xp/needXP()*100)+'%';$('earned').textContent='누적 수익 '+money(s.earned);$('ownedcount').textContent=totalOwned()+'개 운영 중';$('cityname').textContent=cities[s.city].icon+' '+cities[s.city].name+' · '+(s.city?'글로벌 거점':'첫 번째 도시');$('citybadge').textContent='도시 성장도 '+Math.min(100,Math.floor(totalOwned()*2.5))+'% · 건물 '+totalOwned()+'개';renderCityGrowth()}
-function renderBusinesses(){const root=$('businesses');root.innerHTML='';let count=0;defs.forEach(b=>{const own=s.owned[b.id]||0,filter=s.filter;if(filter==='owned'&&!own)return;if(filter==='new'&&own)return;count++;const p=price(b),lv=s.levels[b.id]||0,target=cityGoal(),buyN=buyProgress(b.id),buyNow=Math.min(5,Math.max(0,buyN-(target-5))),incomeNow=Math.min(5,Math.max(0,lv-(target-5))),buyDone=buyNow>=5,incomeDone=incomeNow>=5,upCost=incomeUpgradeCost(b,lv),locked=!own&&s.cash<b.unlock,tier=Math.floor(buyN/5),pct1=buyNow/5*100,pct2=incomeNow/5*100,el=document.createElement('article');el.className='biz';el.dataset.business=b.id;el.innerHTML=`<div class="biztop"><div class="bizvisual" style="--tier:${tier}"><div class="bizbuilding" data-icon="${b.icon}"></div></div><div><div class="bizname">${b.name}</div><div class="bizmeta">보유 ${own}개 · 사업 레벨 ${lv}/${target}</div><div class="bizrate">${money(rate(b))}/초 수익</div><div class="bizmeta">🏢 누적 매입 성장 ${buyN}단계</div></div></div><div class="bizactions"><button class="buy" data-buy="${b.id}" ${s.cash<p?'disabled':''}>${own?'추가 매입':'사업 시작'} · ${money(p)}</button><button class="upgrade" data-up="${b.id}" ${!own||lv>=target||s.cash<upCost?'disabled':''}>수익 강화 ${lv>=target?'완료':(lv+1)+'단계'} · ${money(upCost)}</button></div><div class="bizgrowth"><div class="growthline"><span>🛒 추가 매입 성장</span><strong>${buyNow}/5 · ${Math.floor(pct1)}%</strong></div><div class="growthbar"><i style="width:${pct1}%"></i></div><div class="growthline" style="margin-top:8px"><span>📈 수익 강화 성장</span><strong>${incomeNow}/5 · ${Math.floor(pct2)}%</strong></div><div class="growthbar"><i style="width:${pct2}%;background:linear-gradient(90deg,#5da7ff,#b6d9ff)"></i></div><div class="growthnote">${buyDone&&incomeDone?'✅ 이번 도시 성장 완료':`이번 도시 목표: 추가 매입 ${5-buyNow}회 · 수익 강화 ${5-incomeNow}회 남음`}</div></div>${locked?`<div class="lock">🔒 시작 자금 ${money(b.unlock)}부터 해금</div>`:''}`;root.append(el)});if(!count)root.innerHTML='<div class="muted">표시할 사업이 없습니다.</div>';renderNextRecommendation()}
+function renderBusinesses(){
+  const root=$('businesses');root.innerHTML='';let count=0;
+  defs.forEach(b=>{
+    const own=s.owned[b.id]||0,filter=s.filter;
+    if(filter==='owned'&&!own)return;if(filter==='new'&&own)return;count++;
+    const p=price(b),lv=s.levels[b.id]||0,target=cityGoal(),cityStart=target-5,buyN=buyProgress(b.id);
+    const buyNow=Math.min(5,Math.max(0,buyN-cityStart));
+    const incomeNow=Math.min(5,Math.max(0,lv-cityStart));
+    const buyDone=buyNow>=5,incomeDone=incomeNow>=5,upCost=incomeUpgradeCost(b,lv);
+    const locked=!own&&s.cash<b.unlock,tier=Math.floor(buyN/5),pct1=buyNow/5*100,pct2=incomeNow/5*100;
+    const buyDisabled=buyDone||s.cash<p||(!own&&s.cash<b.unlock);
+    const upgradeDisabled=!own||incomeDone||s.cash<upCost;
+    const buyLabel=buyDone?'⛔ 추가 매입 완료':`${own?'추가 매입':'사업 시작'} · ${money(p)}`;
+    const upgradeLabel=incomeDone?'⛔ 수익 강화 완료':`수익 강화 ${lv+1}단계 · ${money(upCost)}`;
+    const el=document.createElement('article');el.className='biz';el.dataset.business=b.id;
+    el.innerHTML=`<div class="biztop"><div class="bizvisual" style="--tier:${tier}"><div class="bizbuilding" data-icon="${b.icon}"></div></div><div><div class="bizname">${b.name}</div><div class="bizmeta">보유 ${own}개 · 사업 레벨 ${lv}/${target}</div><div class="bizrate">${money(rate(b))}/초 수익</div><div class="bizmeta">🏢 누적 매입 성장 ${buyN}단계</div></div></div><div class="bizactions"><button class="buy" data-buy="${b.id}" ${buyDisabled?'disabled':''}>${buyLabel}</button><button class="upgrade" data-up="${b.id}" ${upgradeDisabled?'disabled':''}>${upgradeLabel}</button></div><div class="bizgrowth"><div class="growthline"><span>🛒 추가 매입 성장</span><strong>${buyNow}/5 · ${Math.floor(pct1)}%</strong></div><div class="growthbar"><i style="width:${pct1}%"></i></div><div class="growthline" style="margin-top:8px"><span>📈 수익 강화 성장</span><strong>${incomeNow}/5 · ${Math.floor(pct2)}%</strong></div><div class="growthbar"><i style="width:${pct2}%;background:linear-gradient(90deg,#5da7ff,#b6d9ff)"></i></div><div class="growthnote">${buyDone&&incomeDone?'✅ 이번 도시 성장 완료':`이번 도시 목표: 추가 매입 ${5-buyNow}회 · 수익 강화 ${5-incomeNow}회 남음`}</div></div>${locked?`<div class="lock">🔒 시작 자금 ${money(b.unlock)}부터 해금</div>`:''}`;
+    root.append(el);
+  });
+  if(!count)root.innerHTML='<div class="muted">표시할 사업이 없습니다.</div>';
+  renderNextRecommendation();updateBusinessActionStates();
+}
+function updateBusinessActionStates(){
+  document.querySelectorAll('.biz[data-business]').forEach(card=>{
+    const id=card.dataset.business,b=defs.find(x=>x.id===id);if(!b)return;
+    const own=s.owned[id]||0,lv=s.levels[id]||0,target=cityGoal(),cityStart=target-5;
+    const buyNow=Math.min(5,Math.max(0,buyProgress(id)-cityStart));
+    const incomeNow=Math.min(5,Math.max(0,lv-cityStart));
+    const p=price(b),upCost=incomeUpgradeCost(b,lv);
+    const buyButton=card.querySelector('[data-buy]'),upButton=card.querySelector('[data-up]');
+    if(buyButton){
+      const done=buyNow>=5;buyButton.disabled=done||s.cash<p||(!own&&s.cash<b.unlock);
+      buyButton.textContent=done?'⛔ 추가 매입 완료':`${own?'추가 매입':'사업 시작'} · ${money(p)}`;
+    }
+    if(upButton){
+      const done=incomeNow>=5;upButton.disabled=!own||done||s.cash<upCost;
+      upButton.textContent=done?'⛔ 수익 강화 완료':`수익 강화 ${lv+1}단계 · ${money(upCost)}`;
+    }
+  });
+}
 function renderNextRecommendation(){const box=$('nexttip');if(!box)return;let best=null;const consider=(label,cost,delta,reason)=>{if(cost>0&&s.cash>=cost&&delta>0){const score=delta/cost;if(!best||score>best.score)best={score,cost,label,reason,delta}}};defs.forEach(b=>{const own=s.owned[b.id]||0,lv=s.levels[b.id]||0,target=cityGoal(),buyN=buyProgress(b.id);if(own>0&&lv<target){const cost=incomeUpgradeCost(b,lv);consider(b.name+' 수익 강화',cost,rate(b)*.12,'사업의 현재 수익을 12% 높일 수 있어요.')}if(buyN<target){const cost=price(b),delta=b.rate*managerFactor(b.id)*globalFactor()*cityFactor()*empireFactor()*Math.pow(1.12,lv);consider(b.name+' 추가 매입',cost,delta,'사업체 1개가 추가되어 초당 수익이 늘어나요.')}});managers.forEach(m=>{if(!s.hired.includes(m.id)){const affected=defs.filter(b=>m.ids.includes(b.id)).reduce((sum,b)=>sum+rate(b),0),factor=managerFactor(m.ids[0]);consider(m.name+' 고용',m.cost,affected*m.bonus/factor,'담당 사업들의 수익을 함께 높여요.')}});upgrades.forEach(u=>{if(!s.bought.includes(u.id))consider(u.name,u.cost,totalRate()*(u.mult-1),'모든 사업의 수익을 동시에 높여요.')});const researchCost=Math.floor(1000000*Math.pow(2.2,s.research||0));consider('무한 경영 연구',researchCost,totalRate()*.1,'전체 사업 수익이 10% 증가해요.');if(s.city<cities.length-1&&cityProgress()===defs.length){const c=cities[s.city+1],delta=totalRate()*(c.mult/cities[s.city].mult-1);consider(c.name+' 도시 개척',c.cost,delta,'모든 사업 수익 배율이 상승하고 다음 5단계 성장 구간이 열려요.')}if(best){box.innerHTML=`<span>💡 <strong>현재 최적 추천: ${best.label}</strong><br>${best.reason}<br><small>비용 ${money(best.cost)} · 예상 수익 증가 ${money(best.delta)}/초 · 비용 대비 효율 ${best.score.toFixed(6)}</small></span>`}else{const missing=defs.find(b=>!s.owned[b.id]||buyProgress(b.id)<cityGoal()||(s.levels[b.id]||0)<cityGoal());box.innerHTML=missing?`<span>💡 다음 목표: <strong>${missing.name}</strong>의 매입과 수익 강화를 진행하세요. 현재 자금으로 살 수 있는 효율적인 투자가 없어 수익을 모으는 중입니다.</span>`:'<span>🏙️ 이번 도시의 모든 성장 목표를 달성했어요. 다음 도시 개척 비용을 모아보세요.</span>'}}
 function renderEmpire(){const next=empireThreshold(s.era||0),current=s.cash+s.earned*.15,prev=s.era?empireThreshold(s.era-1):0,pct=Math.max(0,Math.min(100,(current-prev)/(next-prev)*100));const researchCost=Math.floor(1000000*Math.pow(2.2,s.research||0));$('empire').innerHTML=`<div class="empire-box"><div class="empire-top"><span class="empire-title">🌍 ${empireName()}</span><span class="pill">시대 ${s.era||0}</span></div><div class="empire-desc">시대 달성 보상: 전체 사업 수익 영구 +15% · 현재 시대 보너스 ×${Math.pow(1.15,s.era||0).toFixed(2)}</div><div class="empire-progress"><i style="width:${pct}%"></i></div><div class="empire-meta"><span>다음 시대까지</span><strong>${money(Math.max(0,next-current))}</strong></div><div class="empire-meta"><span>다음 목표 자산</span><strong>${money(next)}</strong></div></div><div class="research-card"><div class="empire-top"><strong>🔬 무한 경영 연구 Lv.${s.research||0}</strong><span class="pill">수익 ×${Math.pow(1.1,s.research||0).toFixed(2)}</span></div><div class="empire-desc">연구할 때마다 모든 사업의 수익이 영구적으로 10% 증가합니다.</div><button class="btn gold" id="researchBtn" ${s.cash<researchCost?'disabled':''}>연구 투자 · ${money(researchCost)}</button></div>`;const b=$('researchBtn');if(b)b.onclick=()=>{if(s.cash<researchCost)return;s.cash-=researchCost;s.research=(s.research||0)+1;toast('🔬 연구 완료! 전체 수익 +10%');render()};}
 function renderManagers(){$('managers').innerHTML=managers.map(m=>{const done=s.hired.includes(m.id);return `<div class="rowitem"><div class="itemleft"><span class="emoji">${m.icon}</span><div><div class="iname">${m.name}</div><div class="idesc">${m.desc}</div></div></div><button class="btn sm ${done?'green':'gold'}" data-manager="${m.id}" ${done||s.cash<m.cost?'disabled':''}>${done?'고용 완료':money(m.cost)}</button></div>`}).join('')}
@@ -127,7 +179,7 @@ function cityProgress(){const goal=cityGoal();return defs.filter(b=>buyProgress(
 function renderCities(){const goal=cityGoal(),done=cityProgress(),ready=done===defs.length;$('cities').innerHTML=`<div class="empire-desc">전체 성장 한도 110레벨 · 현재 목표 ${goal*2}/110레벨 (추가 매입 ${goal}/55 + 수익 강화 ${goal}/55)<br>도시 확장 조건: 모든 사업이 이번 도시의 추가 매입 5단계와 수익 강화 5단계를 달성해야 합니다. 현재 ${done}/${defs.length}개 사업 완료.</div><div class="growthbar" style="margin:8px 0 12px"><i style="width:${done/defs.length*100}%"></i></div>`+cities.map((c,i)=>{const active=i===s.city,unlocked=i<s.city,can=i===s.city+1&&ready&&s.cash>=c.cost;return `<div class="rowitem"><div class="itemleft"><span class="emoji">${c.icon}</span><div><div class="iname">${c.name}${active?' · 현재 도시':''}</div><div class="idesc">전체 수익 배율 ×${c.mult} · 개척 비용 ${money(c.cost)}${i===s.city+1&&!ready?' · 사업 성장 미완료':''}</div></div></div><button class="btn sm ${active?'green':'gold'}" data-city="${i}" ${active||unlocked||!can?'disabled':''}>${active?'운영 중':unlocked?'해금 완료':!ready?'조건 미달':money(c.cost)}</button></div>`}).join('')}
 function renderDaily(){const claimed=s.daily===today();$('dailytext').textContent=claimed?'오늘 보상을 받았어요. 내일 다시 방문하세요.':'매일 접속 보상! 연속 출석하면 보상이 더 커져요.';$('dailybtn').disabled=claimed;$('dailybtn').textContent=claimed?'오늘 보상 수령 완료':'🎁 '+money(500+s.streak*250)+' 받기'}
 function render(){renderStats();renderBusinesses();renderEmpire();renderManagers();renderUpgrades();renderMissions();renderAchievements();renderCities();renderDaily()}
-function buy(id){const b=defs.find(x=>x.id===id);if(!b)return;const p=price(b);if(s.cash<p)return;const before=s.owned[id]||0;if(buyProgress(id)>=cityGoal())return;s.cash-=p;s.owned[id]=before+1;s.buyGrowth[id]=buyProgress(id)+1;s.missionBuys++;pop($('money'),'+1 '+b.icon);render();const card=document.querySelector('[data-business="'+id+'"]');if(card){card.classList.remove('just-grown');void card.offsetWidth;card.classList.add('just-grown')}toast(b.name+' 매입 완료! 추가 매입 성장 게이지가 충전됐어요.')}
+function buy(id){const b=defs.find(x=>x.id===id);if(!b)return;if(!(s.owned[id]||0)&&s.cash<b.unlock)return;const p=price(b);if(s.cash<p)return;const before=s.owned[id]||0;if(buyProgress(id)>=cityGoal())return;s.cash-=p;s.owned[id]=before+1;s.buyGrowth[id]=buyProgress(id)+1;s.missionBuys++;pop($('money'),'+1 '+b.icon);render();const card=document.querySelector('[data-business="'+id+'"]');if(card){card.classList.remove('just-grown');void card.offsetWidth;card.classList.add('just-grown')}toast(b.name+' 매입 완료! 추가 매입 성장 게이지가 충전됐어요.')}
 function upgradeBiz(id){const b=defs.find(x=>x.id===id);if(!b||!s.owned[id])return;const lv=s.levels[id]||0;if(lv>=cityGoal())return;const c=incomeUpgradeCost(b,lv);if(s.cash<c)return;s.cash-=c;s.levels[id]=lv+1;toast(b.name+' 수익 강화 '+(lv+1)+'단계 완료!');render()}
 function hire(id){const m=managers.find(x=>x.id===id);if(!m||s.hired.includes(id)||s.cash<m.cost)return;s.cash-=m.cost;s.hired.push(id);toast(m.name+' 고용 완료!');render()}
 function buyUpgrade(id){const u=upgrades.find(x=>x.id===id);if(!u||s.bought.includes(id)||s.cash<u.cost)return;s.cash-=u.cost;s.bought.push(id);toast(u.name+' 적용 완료!');render()}
@@ -143,7 +195,7 @@ $('cities').addEventListener('click',e=>{const b=e.target.closest('[data-city]')
 document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{s.filter=b.dataset.filter;document.querySelectorAll('[data-filter]').forEach(x=>x.classList.toggle('active',x===b));renderBusinesses()});
 $('dailybtn').onclick=daily;$('saveBtn').onclick=()=>save(false);
 $('resetBtn').onclick=()=>ask('게임 초기화','정말 처음부터 다시 시작할까요? 저장된 진행 상황이 모두 사라집니다.',()=>{localStorage.removeItem('nostressIdleEmpireSaveV2');s=fresh();render();toast('새로운 제국을 시작합니다!')});
-load();checkEmpireEra();render();setInterval(()=>{const r=totalRate();gain(r);renderStats();renderEmpire();},1000);setInterval(()=>save(true),15000);window.addEventListener('beforeunload',()=>save(true));
+load();checkEmpireEra();render();setInterval(()=>{const r=totalRate();gain(r);renderStats();renderEmpire();updateBusinessActionStates();},1000);setInterval(()=>save(true),15000);window.addEventListener('beforeunload',()=>save(true));
 })();
 </script>
 </body>
